@@ -1,0 +1,20 @@
+
+This is a small programme that solve the skewb puzzle. The skewb puzzle is a Rubik's Cube like puzzle, which is equivalent to a 2x2 on a octahedron (i.e. it has 4 rotation planes). It is a relatively simple puzzle with few possible combinations (gods number here is 11 and the possible combinations are a bit over 3 million).
+
+This programme brute forces the solution with not particular optimized search algotihm.
+
+It also creates an image of the scramble.
+
+Usage:
+ gskewb scrabble [Options]
+
+Scrable:
+ Uses F, R, L, U notation
+ Cube position: top white, left green
+ White-Green-Red corner remains stationary (can only rotate)
+
+Options:
+ -s          Find fastest solution
+ -i filename Output scrable into an image
+ -h          Print this message
+
