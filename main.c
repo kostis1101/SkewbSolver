@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -243,9 +244,10 @@ void move(skewb_pos *skb, int move) {
 void draw_center(uint8_t *image, int width, int x, int y, int s, struct colour c) {
 	for (int xx = x; xx < x + s; xx++) {
 		int h = xx - x;
-		if (h > s / 2)
-			h = s - h;
-		for (int yy = y + s / 2 - h + 1; yy < y + s / 2 + h; yy++) {
+		if (h >= s / 2)
+			h = s - h - 1;
+		// Why tf am I this stupid with cache locality??? Anyways not gonna fix it now...
+		for (int yy = y + s / 2 - h; yy < y + s / 2 + h; yy++) {
 			image[3 * (xx + yy * width) + 0] = c.r;
 			image[3 * (xx + yy * width) + 1] = c.g;
 			image[3 * (xx + yy * width) + 2] = c.b;
@@ -256,16 +258,18 @@ void draw_center(uint8_t *image, int width, int x, int y, int s, struct colour c
 
 
 void draw_corner(uint8_t *image, int width, int sx, int sy, int s, int corn, struct colour c) {
-	for (int xx = 0; xx < s/2; xx++) {
+	for (int xx = 0; xx < s/2 - 1; xx++) {
 		int xpos = xx;
 		if (corn & 1)
-			xpos = s - xx;
+			xpos = s - 1 - xx;
 		xpos += sx;
-		for (int yy = 0; yy < s/2 - xx; yy++) {
+		for (int yy = 0; yy < s/2 - xx - 1; yy++) {
 			int ypos = yy;
 			if (corn & 2)
-				ypos = s - yy;
+				ypos = s - 1 - yy;
 			ypos += sy;
+
+			//assert(ypos < 300);
 
 			image[3 * (xpos + ypos * width) + 0] = c.r;
 			image[3 * (xpos + ypos * width) + 1] = c.g;
@@ -553,7 +557,7 @@ char *str_moves(int *moves) {
 	for (number_of_moves = 0; moves[number_of_moves] != -1 ;
 		number_of_moves++, chars_amount += 2 + (moves[number_of_moves] & 1));
 
-	char *result = malloc(chars_amount);
+	char *result = calloc(chars_amount + 2, 1);
 
 	for (int i = 0; i < number_of_moves; i++) {
 		strcat(result, moves_str[moves[i]]);
@@ -738,7 +742,7 @@ void image_save(const char *name, struct image img) {
 	if ((len >= 4 && strcmp(name + len - 4, ".jpg") == 0) || (len >= 5 && strcmp(name + len - 5, ".jpeg") == 0))
 		stbi_write_jpg(name, img.width, img.height, 3, img.data, 70);
 	else
-		stbi_write_png(name, img.width, img.height, 3, img.data, 3);
+		stbi_write_png(name, img.width, img.height, 3, img.data, img.width * 3);
 
 	/* ppm stuff
 	FILE *file = fopen(name, "wb");
@@ -806,7 +810,7 @@ int main(int argc, const char **argv) {
 					printf("-i option requires an file name. Use -h for help\n");
 					return 0;
 				}
-				img_name = argv[i + 1];
+				img_name = argv[i];
 				break;
 			case 'h':
 				print_help();
@@ -819,12 +823,11 @@ int main(int argc, const char **argv) {
 		i++;
 	}
 
-
 	skewb_pos skb = skewb_id;
 	do_moves(&skb, argv[1]);
 
 	if (img_name) {
-		struct image img = create_skewb_image(&skb, 100);
+		struct image img = create_skewb_image(&skb, 200);
 		image_save(img_name, img);
 		free(img.data);
 	}
